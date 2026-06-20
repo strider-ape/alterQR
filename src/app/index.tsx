@@ -2,6 +2,7 @@ import * as Sharing from 'expo-sharing';
 import { MotiPressable } from 'moti/interactions';
 import { useState } from 'react';
 import { ActivityIndicator, Image, Text, View } from 'react-native';
+import { useSharedValue } from 'react-native-reanimated';
 
 import { NeoShadow } from '@/components/neo-shadow';
 import { useQRLoop } from '@/hooks/use-qr-loop';
@@ -9,12 +10,15 @@ import { useQRLoop } from '@/hooks/use-qr-loop';
 const OFFSET = 4;
 
 // ─── SHARE QR animated button ────────────────────────────────────────────────
-// MotiPressable wraps a MotiView internally. The `animate` callback receives
-// the live `{ pressed }` derived value — no 'worklet' directive is needed here
-// because useDerivedValue already runs this on the UI thread.
-// When pressed, the button content translates right+down by OFFSET px, sliding
-// into the static shadow behind it to simulate a physical key press.
+// MotiPressable's `animate` prop is called inside useDerivedValue on the UI
+// thread — it MUST be a worklet (react-native-worklets enforces this strictly).
+// Closed-over JS values can't be read from worklets, so `disabled` is stored
+// in a SharedValue that the UI thread can access safely.
 function ShareButton({ onPress, disabled }: { onPress: () => void; disabled?: boolean }) {
+  // Mirror the JS-side `disabled` prop into a shared value the worklet can read.
+  const isDisabled = useSharedValue(disabled ?? false);
+  isDisabled.value = disabled ?? false; // keep in sync on every render
+
   return (
     // Outer shell: static shadow sits here, content slides over it on press
     <View style={{ paddingRight: OFFSET, paddingBottom: OFFSET }}>
@@ -29,15 +33,16 @@ function ShareButton({ onPress, disabled }: { onPress: () => void; disabled?: bo
           backgroundColor: '#000',
         }}
       />
-      {/* MotiPressable: animates translateX/Y to simulate the press-down */}
+      {/* MotiPressable: 'worklet' is required — animate runs on the UI thread */}
       <MotiPressable
         onPress={disabled ? undefined : onPress}
-        animate={({ pressed }) => ({
-          transform: [
-            { translateX: !disabled && pressed ? OFFSET : 0 },
-            { translateY: !disabled && pressed ? OFFSET : 0 },
-          ],
-        })}
+        animate={({ pressed }) => {
+          'worklet';
+          const offset = isDisabled.value ? 0 : pressed ? OFFSET : 0;
+          return {
+            transform: [{ translateX: offset }, { translateY: offset }],
+          };
+        }}
         transition={{ type: 'timing', duration: 80 }}
         style={{
           backgroundColor: disabled ? '#d4b800' : '#ffe03d',
