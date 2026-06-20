@@ -34,6 +34,13 @@
             "imageWidth": 76
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "alterQR needs access to your photos to import QR code screenshots.",
+          "cameraPermission": "alterQR needs camera access to scan QR codes."
+        }
       ]
     ],
     "experiments": {
