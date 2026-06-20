@@ -1,7 +1,7 @@
 import * as ImagePicker from 'expo-image-picker';
 import { MotiPressable } from 'moti/interactions';
+import { useMemo } from 'react';
 import { Alert, FlatList, Image, Text, View } from 'react-native';
-import { useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NeoShadow } from '@/components/neo-shadow';
@@ -19,10 +19,6 @@ interface NeoBtnProps {
 }
 
 function NeoBtn({ onPress, label, bg, disabled = false }: NeoBtnProps) {
-  // Mirror JS-side disabled into a SharedValue readable by the UI-thread worklet.
-  const isDisabled = useSharedValue(disabled);
-  isDisabled.value = disabled; // keep in sync on every render
-
   return (
     <View className="flex-1" style={{ paddingRight: OFFSET, paddingBottom: OFFSET }}>
       {/* Static shadow */}
@@ -38,13 +34,15 @@ function NeoBtn({ onPress, label, bg, disabled = false }: NeoBtnProps) {
       />
       <MotiPressable
         onPress={disabled ? undefined : onPress}
-        animate={({ pressed }) => {
-          'worklet';
-          const offset = isDisabled.value ? 0 : pressed ? OFFSET : 0;
-          return {
-            transform: [{ translateX: offset }, { translateY: offset }],
+        animate={useMemo(() => {
+          return ({ pressed }: { pressed: boolean }) => {
+            'worklet';
+            const offset = disabled ? 0 : pressed ? OFFSET : 0;
+            return {
+              transform: [{ translateX: offset }, { translateY: offset }],
+            };
           };
-        }}
+        }, [disabled])}
         transition={{ type: 'timing', duration: 80 }}
         style={{
           backgroundColor: disabled ? '#ccc' : bg,
