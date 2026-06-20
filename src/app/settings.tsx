@@ -1,26 +1,108 @@
 import * as ImagePicker from 'expo-image-picker';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  Pressable,
-  Text,
-  View,
-} from 'react-native';
+import { MotiPressable } from 'moti/interactions';
+import { Alert, FlatList, Image, Text, View } from 'react-native';
 
+import { NeoShadow } from '@/components/neo-shadow';
 import { useQRLoop } from '@/hooks/use-qr-loop';
 
-export default function SettingsScreen() {
-  const { qrImages, addImages, clearAll, isLoading } = useQRLoop();
+const OFFSET = 4;
 
-  // ─── Handlers ───────────────────────────────────────────────────────────────
+// ─── Reusable Neo-Brutalist button ───────────────────────────────────────────
+interface NeoBtnProps {
+  onPress: () => void;
+  label: string;
+  /** Tailwind background color class, e.g. '#ffe03d' */
+  bg: string;
+  disabled?: boolean;
+}
+
+function NeoBtn({ onPress, label, bg, disabled = false }: NeoBtnProps) {
+  return (
+    <View className="flex-1" style={{ paddingRight: OFFSET, paddingBottom: OFFSET }}>
+      {/* Static shadow */}
+      <View
+        style={{
+          position: 'absolute',
+          top: OFFSET,
+          left: OFFSET,
+          bottom: 0,
+          right: 0,
+          backgroundColor: disabled ? '#888' : '#000',
+        }}
+      />
+      <MotiPressable
+        onPress={disabled ? undefined : onPress}
+        animate={({ pressed }) => ({
+          transform: [
+            { translateX: !disabled && pressed ? OFFSET : 0 },
+            { translateY: !disabled && pressed ? OFFSET : 0 },
+          ],
+        })}
+        transition={{ type: 'timing', duration: 80 }}
+        style={{
+          backgroundColor: disabled ? '#ccc' : bg,
+          borderWidth: 4,
+          borderColor: disabled ? '#888' : '#000',
+          alignItems: 'center',
+          paddingVertical: 16,
+        }}>
+        <Text
+          style={{
+            fontWeight: '900',
+            fontSize: 13,
+            textTransform: 'uppercase',
+            letterSpacing: 2,
+            color: disabled ? '#999' : '#000',
+          }}>
+          {label}
+        </Text>
+      </MotiPressable>
+    </View>
+  );
+}
+
+// ─── Grid card ───────────────────────────────────────────────────────────────
+function QRGridCard({ uri, index }: { uri: string; index: number }) {
+  return (
+    <View className="flex-1" style={{ paddingRight: OFFSET, paddingBottom: OFFSET }}>
+      {/* Shadow */}
+      <View
+        style={{
+          position: 'absolute',
+          top: OFFSET,
+          left: OFFSET,
+          bottom: 0,
+          right: 0,
+          backgroundColor: '#000',
+        }}
+      />
+      {/* Card */}
+      <View className="overflow-hidden border-4 border-black bg-white">
+        <Image
+          source={{ uri }}
+          className="aspect-square w-full"
+          resizeMode="cover"
+        />
+        {/* Label strip */}
+        <View className="border-t-4 border-black bg-[#b8ff3d] px-2 py-1">
+          <Text className="text-xs font-black uppercase tracking-widest text-black">
+            QR #{index + 1}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
+export default function SettingsScreen() {
+  const { qrImages, addImages, clearAll } = useQRLoop();
+
   async function handlePickImages() {
-    // Request media library permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert(
-        'Permission required',
+        'Permission Required',
         'Please allow access to your photo library to select QR codes.',
       );
       return;
@@ -30,101 +112,75 @@ export default function SettingsScreen() {
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       quality: 1,
-      // Orderedselection keeps them in the tapped order on iOS 15+
       orderedSelection: true,
     });
 
     if (result.canceled) return;
-
-    const uris = result.assets.map((asset) => asset.uri);
-    await addImages(uris);
+    await addImages(result.assets.map((a) => a.uri));
   }
 
   function handleClearAll() {
     if (qrImages.length === 0) return;
-
     Alert.alert(
-      'Clear all QR codes',
-      `This will remove all ${qrImages.length} image(s). This cannot be undone.`,
+      'CLEAR ALL?',
+      `Remove all ${qrImages.length} QR code(s)? This cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Clear All',
-          style: 'destructive',
-          onPress: () => clearAll(),
-        },
+        { text: 'Clear All', style: 'destructive', onPress: () => clearAll() },
       ],
     );
   }
 
-  // ─── Render ─────────────────────────────────────────────────────────────────
-  if (isLoading) {
-    return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#6366f1" />
-      </View>
-    );
-  }
-
   return (
-    <View className="flex-1 bg-white">
-      {/* Header */}
-      <View className="px-5 pb-3 pt-6">
-        <Text className="text-2xl font-bold text-gray-800">Settings</Text>
-        <Text className="mt-1 text-sm text-gray-500">
-          Manage your QR code images.
+    <View className="flex-1 bg-[#f7f7f2]">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <View className="border-b-4 border-black px-5 pb-5 pt-10">
+        <Text className="text-xs font-black uppercase tracking-[6px] text-black/40">
+          MANAGE
+        </Text>
+        <Text className="mt-1 text-4xl font-black uppercase leading-none tracking-tight text-black">
+          QR CODES
         </Text>
       </View>
 
-      {/* Action buttons */}
-      <View className="flex-row gap-3 px-5 pb-4">
-        <Pressable
-          onPress={handlePickImages}
-          className="flex-1 items-center rounded-xl bg-indigo-500 py-3 active:opacity-75">
-          <Text className="font-semibold text-white">＋ Add Images</Text>
-        </Pressable>
-
-        <Pressable
+      {/* ── Action buttons ─────────────────────────────────────────────────── */}
+      <View className="flex-row border-b-4 border-black px-5 pb-6 pt-5">
+        <NeoBtn onPress={handlePickImages} label="＋ ADD QR" bg="#ffe03d" />
+        <NeoBtn
           onPress={handleClearAll}
+          label="CLEAR ALL"
+          bg="#ff5ca8"
           disabled={qrImages.length === 0}
-          className="flex-1 items-center rounded-xl border border-red-300 py-3 active:opacity-75 disabled:opacity-40">
-          <Text className="font-semibold text-red-500">Clear All</Text>
-        </Pressable>
+        />
       </View>
 
-      {/* Image list */}
+      {/* ── Image grid ─────────────────────────────────────────────────────── */}
       {qrImages.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
-          <Text className="text-center text-base text-gray-400">
-            No QR codes yet.{'\n'}Tap "Add Images" to pick from your gallery.
+          <Text className="text-center font-black uppercase tracking-widest text-black/30">
+            NO QR CODES YET.{'\n'}TAP ADD QR TO GET STARTED.
           </Text>
         </View>
       ) : (
-        <FlatList
-          data={qrImages}
-          keyExtractor={(_, i) => String(i)}
-          contentContainerClassName="px-5 pb-8 gap-3"
-          renderItem={({ item, index }) => (
-            <View className="flex-row items-center rounded-xl border border-gray-100 bg-gray-50 p-3">
-              <Image
-                source={{ uri: item }}
-                className="mr-3 h-16 w-16 rounded-lg"
-                resizeMode="cover"
-              />
-              <View className="flex-1">
-                <Text className="text-sm font-medium text-gray-700">
-                  QR Code {index + 1}
-                </Text>
-                <Text
-                  className="mt-0.5 text-xs text-gray-400"
-                  numberOfLines={1}
-                  ellipsizeMode="middle">
-                  {item}
-                </Text>
-              </View>
-            </View>
-          )}
-        />
+        <>
+          {/* Count header */}
+          <View className="px-5 pb-2 pt-4">
+            <Text className="text-xs font-black uppercase tracking-widest text-black/40">
+              {qrImages.length} CODE{qrImages.length !== 1 ? 'S' : ''} SAVED
+            </Text>
+          </View>
+
+          <FlatList
+            data={qrImages}
+            numColumns={2}
+            keyExtractor={(_, i) => String(i)}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32, paddingTop: 8 }}
+            columnWrapperStyle={{ gap: 0 }}
+            renderItem={({ item, index }) => (
+              <QRGridCard uri={item} index={index} />
+            )}
+          />
+        </>
       )}
     </View>
   );

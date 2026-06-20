@@ -1,41 +1,146 @@
-import { ActivityIndicator, Image, Text, View } from 'react-native';
+import { MotiPressable } from 'moti/interactions';
+import { ActivityIndicator, Image, Platform, Share, Text, View } from 'react-native';
 
+import { NeoShadow } from '@/components/neo-shadow';
 import { useQRLoop } from '@/hooks/use-qr-loop';
 
+const OFFSET = 4;
+
+// ─── SHARE QR animated button ────────────────────────────────────────────────
+// MotiPressable wraps a MotiView internally. The `animate` callback receives
+// the live `{ pressed }` derived value — no 'worklet' directive is needed here
+// because useDerivedValue already runs this on the UI thread.
+// When pressed, the button content translates right+down by OFFSET px, sliding
+// into the static shadow behind it to simulate a physical key press.
+function ShareButton({ onPress }: { onPress: () => void }) {
+  return (
+    // Outer shell: static shadow sits here, content slides over it on press
+    <View style={{ paddingRight: OFFSET, paddingBottom: OFFSET }}>
+      {/* Static black shadow — does NOT move */}
+      <View
+        style={{
+          position: 'absolute',
+          top: OFFSET,
+          left: OFFSET,
+          bottom: 0,
+          right: 0,
+          backgroundColor: '#000',
+        }}
+      />
+      {/* MotiPressable: animates translateX/Y to simulate the press-down */}
+      <MotiPressable
+        onPress={onPress}
+        animate={({ pressed }) => ({
+          transform: [
+            { translateX: pressed ? OFFSET : 0 },
+            { translateY: pressed ? OFFSET : 0 },
+          ],
+        })}
+        transition={{ type: 'timing', duration: 80 }}
+        style={{
+          backgroundColor: '#ffe03d',
+          borderWidth: 4,
+          borderColor: '#000',
+          alignItems: 'center',
+          paddingVertical: 20,
+        }}>
+        <Text
+          style={{
+            fontWeight: '900',
+            fontSize: 20,
+            textTransform: 'uppercase',
+            letterSpacing: 5,
+            color: '#000',
+          }}>
+          SHARE QR
+        </Text>
+      </MotiPressable>
+    </View>
+  );
+}
+
+// ─── Screen ──────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const { qrImages, currentIndex, isLoading } = useQRLoop();
 
+  async function handleShare() {
+    const uri = qrImages[currentIndex];
+    if (!uri) return;
+    try {
+      await Share.share(
+        Platform.OS === 'ios'
+          ? { url: uri, message: 'My QR code' }
+          : { message: uri },
+      );
+    } catch {
+      // User cancelled or share sheet unavailable — ignore silently
+    }
+  }
+
+  // ─── Loading ───────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <ActivityIndicator size="large" color="#6366f1" />
+      <View className="flex-1 items-center justify-center bg-[#f7f7f2]">
+        <ActivityIndicator size="large" color="#000" />
       </View>
     );
   }
 
   const activeUri = qrImages.length > 0 ? qrImages[currentIndex] : null;
 
+  // ─── Empty state ───────────────────────────────────────────────────────────
+  if (!activeUri) {
+    return (
+      <View className="flex-1 items-center justify-center bg-[#f7f7f2] px-6">
+        <NeoShadow>
+          <View className="border-4 border-black bg-[#ffe03d] px-8 py-8">
+            <Text className="text-center text-3xl font-black uppercase leading-tight text-black">
+              NO QR{'\n'}CODES YET
+            </Text>
+            <View className="mt-4 border-t-2 border-black/20 pt-3">
+              <Text className="text-center text-xs font-black uppercase tracking-widest text-black/60">
+                Go to Settings to add some!
+              </Text>
+            </View>
+          </View>
+        </NeoShadow>
+      </View>
+    );
+  }
+
+  // ─── Active QR ─────────────────────────────────────────────────────────────
   return (
-    <View className="flex-1 items-center justify-center bg-white px-6">
-      {activeUri ? (
-        <>
+    <View className="flex-1 bg-[#f7f7f2] px-5 pb-8 pt-10">
+      {/* Screen title */}
+      <Text className="mb-1 text-xs font-black uppercase tracking-[6px] text-black/40">
+        CURRENTLY SHOWING
+      </Text>
+      <Text className="mb-6 text-4xl font-black uppercase leading-none tracking-tight text-black">
+        ACTIVE QR{'\n'}CODE
+      </Text>
+
+      {/* QR image card — prominent neo-brutalist card with lime background */}
+      <NeoShadow>
+        <View className="border-4 border-black bg-[#b8ff3d] p-4">
           <Image
             source={{ uri: activeUri }}
-            className="h-72 w-72 rounded-2xl"
+            className="aspect-square w-full"
             resizeMode="contain"
           />
-          <Text className="mt-4 text-sm text-gray-400">
-            {currentIndex + 1} / {qrImages.length}
+        </View>
+      </NeoShadow>
+
+      {/* Counter badge */}
+      <View className="my-5 flex-row justify-center">
+        <View className="border-2 border-black bg-white px-4 py-1">
+          <Text className="text-xs font-black uppercase tracking-widest text-black">
+            {currentIndex + 1} OF {qrImages.length}
           </Text>
-        </>
-      ) : (
-        <>
-          <Text className="text-2xl font-bold text-gray-700">No QR codes added yet.</Text>
-          <Text className="mt-2 text-center text-sm text-gray-400">
-            Go to Settings to upload your QR screenshots.
-          </Text>
-        </>
-      )}
+        </View>
+      </View>
+
+      {/* Share QR — MotiPressable with physical press-down animation */}
+      <ShareButton onPress={handleShare} />
     </View>
   );
 }
