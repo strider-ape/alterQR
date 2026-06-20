@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from 'react';
 
 const STORAGE_KEY_IMAGES = '@alterqr/qr_images';
 const STORAGE_KEY_INDEX = '@alterqr/current_index';
@@ -34,7 +34,9 @@ export interface UseQRLoopReturn {
  *   2. Share sheet dismisses →  advanceToNextQR()
  *   3. The card immediately shows the next QR code (loops back to 0 at the end)
  */
-export function useQRLoop(): UseQRLoopReturn {
+const QRLoopContext = createContext<UseQRLoopReturn | null>(null);
+
+export function QRLoopProvider({ children }: { children: ReactNode }) {
   const [qrImages, setQrImages] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -131,5 +133,19 @@ export function useQRLoop(): UseQRLoopReturn {
     });
   }, [persistIndex]);
 
-  return { qrImages, currentIndex, addImages, clearAll, advanceToNextQR, isLoading };
+  const value = { qrImages, currentIndex, addImages, clearAll, advanceToNextQR, isLoading };
+
+  return (
+    <QRLoopContext.Provider value={value}>
+      {children}
+    </QRLoopContext.Provider>
+  );
+}
+
+export function useQRLoop(): UseQRLoopReturn {
+  const context = useContext(QRLoopContext);
+  if (!context) {
+    throw new Error('useQRLoop must be used within a QRLoopProvider');
+  }
+  return context;
 }
