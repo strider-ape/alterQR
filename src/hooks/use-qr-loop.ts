@@ -13,8 +13,12 @@ export interface UseQRLoopReturn {
   addImages: (uris: string[]) => Promise<void>;
   /** Remove all images and reset the index to 0. */
   clearAll: () => Promise<void>;
-  /** Advance to the next image, wrapping around when at the end. */
-  advance: () => Promise<void>;
+  /**
+   * Increment `currentIndex` by 1, wrapping back to 0 when the end of the
+   * list is reached. Persists the new index to AsyncStorage immediately so
+   * the position survives app restarts.
+   */
+  advanceToNextQR: () => Promise<void>;
   /** True while the initial AsyncStorage load is in progress. */
   isLoading: boolean;
 }
@@ -23,7 +27,12 @@ export interface UseQRLoopReturn {
  * Manages the QR image loop state and keeps it in sync with AsyncStorage.
  *
  * Usage:
- *   const { qrImages, currentIndex, addImages, clearAll, advance } = useQRLoop();
+ *   const { qrImages, currentIndex, addImages, clearAll, advanceToNextQR } = useQRLoop();
+ *
+ * Typical share flow:
+ *   1. User taps "SHARE QR"  →  Sharing.shareAsync(qrImages[currentIndex])
+ *   2. Share sheet dismisses →  advanceToNextQR()
+ *   3. The card immediately shows the next QR code (loops back to 0 at the end)
  */
 export function useQRLoop(): UseQRLoopReturn {
   const [qrImages, setQrImages] = useState<string[]>([]);
@@ -93,17 +102,34 @@ export function useQRLoop(): UseQRLoopReturn {
     ]);
   }, []);
 
-  const advance = useCallback(async () => {
-    setQrImages((images) => {
-      if (images.length === 0) return images;
-      setCurrentIndex((prev) => {
-        const next = (prev + 1) % images.length;
-        persistIndex(next);
-        return next;
+  /**
+   * Advance the loop by one step.
+   *
+   * Uses the functional form of both setters so we always read the
+   * *latest* state without capturing stale closure values. The new index
+   * is persisted to AsyncStorage before the state update resolves, keeping
+   * the stored value in sync with what the UI will render next.
+   */
+  const advanceToNextQR = useCallback(async () => {
+    // Wrap in a Promise so callers can await the full persistence.
+    await new Promise<void>((resolve) => {
+      setQrImages((images) => {
+        if (images.length === 0) {
+          resolve();
+          return images;
+        }
+
+        setCurrentIndex((prev) => {
+          const next = (prev + 1) % images.length;
+          // Fire-and-forget persistence; resolve after scheduling.
+          persistIndex(next).then(resolve);
+          return next;
+        });
+
+        return images; // images array itself does not change
       });
-      return images;
     });
   }, [persistIndex]);
 
-  return { qrImages, currentIndex, addImages, clearAll, advance, isLoading };
+  return { qrImages, currentIndex, addImages, clearAll, advanceToNextQR, isLoading };
 }

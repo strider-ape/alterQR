@@ -41,7 +41,8 @@
           "photosPermission": "alterQR needs access to your photos to import QR code screenshots.",
           "cameraPermission": "alterQR needs camera access to scan QR codes."
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,

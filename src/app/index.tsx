@@ -1,5 +1,7 @@
+import * as Sharing from 'expo-sharing';
 import { MotiPressable } from 'moti/interactions';
-import { ActivityIndicator, Image, Platform, Share, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Image, Text, View } from 'react-native';
 
 import { NeoShadow } from '@/components/neo-shadow';
 import { useQRLoop } from '@/hooks/use-qr-loop';
@@ -12,7 +14,7 @@ const OFFSET = 4;
 // because useDerivedValue already runs this on the UI thread.
 // When pressed, the button content translates right+down by OFFSET px, sliding
 // into the static shadow behind it to simulate a physical key press.
-function ShareButton({ onPress }: { onPress: () => void }) {
+function ShareButton({ onPress, disabled }: { onPress: () => void; disabled?: boolean }) {
   return (
     // Outer shell: static shadow sits here, content slides over it on press
     <View style={{ paddingRight: OFFSET, paddingBottom: OFFSET }}>
@@ -29,20 +31,21 @@ function ShareButton({ onPress }: { onPress: () => void }) {
       />
       {/* MotiPressable: animates translateX/Y to simulate the press-down */}
       <MotiPressable
-        onPress={onPress}
+        onPress={disabled ? undefined : onPress}
         animate={({ pressed }) => ({
           transform: [
-            { translateX: pressed ? OFFSET : 0 },
-            { translateY: pressed ? OFFSET : 0 },
+            { translateX: !disabled && pressed ? OFFSET : 0 },
+            { translateY: !disabled && pressed ? OFFSET : 0 },
           ],
         })}
         transition={{ type: 'timing', duration: 80 }}
         style={{
-          backgroundColor: '#ffe03d',
+          backgroundColor: disabled ? '#d4b800' : '#ffe03d',
           borderWidth: 4,
           borderColor: '#000',
           alignItems: 'center',
           paddingVertical: 20,
+          opacity: disabled ? 0.7 : 1,
         }}>
         <Text
           style={{
@@ -61,19 +64,34 @@ function ShareButton({ onPress }: { onPress: () => void }) {
 
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function HomeScreen() {
-  const { qrImages, currentIndex, isLoading } = useQRLoop();
+  const { qrImages, currentIndex, advanceToNextQR, isLoading } = useQRLoop();
+  const [isSharing, setIsSharing] = useState(false);
 
   async function handleShare() {
     const uri = qrImages[currentIndex];
-    if (!uri) return;
+    if (!uri || isSharing) return;
+
+    // Check the platform can share files before attempting
+    const canShare = await Sharing.isAvailableAsync();
+    if (!canShare) return;
+
+    setIsSharing(true);
     try {
-      await Share.share(
-        Platform.OS === 'ios'
-          ? { url: uri, message: 'My QR code' }
-          : { message: uri },
-      );
+      // shareAsync resolves only after the sheet is fully dismissed —
+      // either the user completed the share or explicitly cancelled it.
+      await Sharing.shareAsync(uri, {
+        mimeType: 'image/*',
+        dialogTitle: 'Share your QR code',
+      });
+
+      // Sheet has closed: advance the loop to the next QR.
+      await advanceToNextQR();
     } catch {
-      // User cancelled or share sheet unavailable — ignore silently
+      // The OS threw (e.g. permission denied, file not found). Advance anyway
+      // so the loop doesn't get stuck on a broken entry.
+      await advanceToNextQR();
+    } finally {
+      setIsSharing(false);
     }
   }
 
@@ -140,7 +158,7 @@ export default function HomeScreen() {
       </View>
 
       {/* Share QR — MotiPressable with physical press-down animation */}
-      <ShareButton onPress={handleShare} />
+      <ShareButton onPress={handleShare} disabled={isSharing} />
     </View>
   );
 }
