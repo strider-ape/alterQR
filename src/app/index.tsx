@@ -3,6 +3,7 @@ import { MotiPressable } from 'moti/interactions';
 import { useState } from 'react';
 import { ActivityIndicator, Image, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NeoShadow } from '@/components/neo-shadow';
 import { useQRLoop } from '@/hooks/use-qr-loop';
@@ -71,6 +72,7 @@ function ShareButton({ onPress, disabled }: { onPress: () => void; disabled?: bo
 export default function HomeScreen() {
   const { qrImages, currentIndex, advanceToNextQR, isLoading } = useQRLoop();
   const [isSharing, setIsSharing] = useState(false);
+  const insets = useSafeAreaInsets();
 
   async function handleShare() {
     const uri = qrImages[currentIndex];
@@ -133,7 +135,7 @@ export default function HomeScreen() {
 
   // ─── Active QR ─────────────────────────────────────────────────────────────
   return (
-    <View className="flex-1 bg-[#f7f7f2] px-5 pb-8 pt-10">
+    <View className="flex-1 bg-[#f7f7f2] px-5 pb-8" style={{ paddingTop: insets.top + 16 }}>
       {/* Screen title */}
       <Text className="mb-1 text-xs font-black uppercase tracking-[6px] text-black/40">
         CURRENTLY SHOWING

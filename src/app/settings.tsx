@@ -2,6 +2,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { MotiPressable } from 'moti/interactions';
 import { Alert, FlatList, Image, Text, View } from 'react-native';
 import { useSharedValue } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NeoShadow } from '@/components/neo-shadow';
 import { useQRLoop } from '@/hooks/use-qr-loop';
@@ -103,6 +104,7 @@ function QRGridCard({ uri, index }: { uri: string; index: number }) {
 // ─── Screen ──────────────────────────────────────────────────────────────────
 export default function SettingsScreen() {
   const { qrImages, addImages, clearAll } = useQRLoop();
+  const insets = useSafeAreaInsets();
 
   async function handlePickImages() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -140,7 +142,9 @@ export default function SettingsScreen() {
   return (
     <View className="flex-1 bg-[#f7f7f2]">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <View className="border-b-4 border-black px-5 pb-5 pt-10">
+      <View
+        className="border-b-4 border-black px-5 pb-5"
+        style={{ paddingTop: insets.top + 16 }}>
         <Text className="text-xs font-black uppercase tracking-[6px] text-black/40">
           MANAGE
         </Text>
