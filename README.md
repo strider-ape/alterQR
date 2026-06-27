@@ -1,56 +1,70 @@
-# Welcome to your Expo app 👋
+# alterQR
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+alterQR is a fast, offline-first React Native utility app designed to let users upload, manage, and cycle through multiple QR codes or barcode images. Built with a stunning **Neo-Brutalist** aesthetic, the app makes it effortless to rapidly switch between and share your different QR codes at events, check-ins, or networking sessions.
 
-## Get started
+## Features
 
-1. Install dependencies
+- **Dynamic QR Loop**: Load multiple QR code screenshots from your device's gallery. The app automatically cycles to the next QR code immediately after you share the current one.
+- **Persistent Storage**: All images and the current sequence position are saved securely on-device using `AsyncStorage`.
+- **Native Sharing**: Instantly trigger the native Android/iOS share sheet with one tap.
+- **Neo-Brutalist UI**: High contrast, thick borders, sharp drop shadows, and incredibly snappy micro-animations.
+- **Fully Offline**: Zero network requests required. Your data and images never leave your phone.
 
-   ```bash
-   npm install
-   ```
+## Technology Stack
 
-2. Start the app
+- **Framework**: React Native (via Expo SDK 56)
+- **Routing**: Expo Router (File-based navigation)
+- **Styling**: NativeWind (TailwindCSS)
+- **Animations**: Moti & React Native Reanimated
+- **Storage**: `@react-native-async-storage/async-storage`
+- **Native Modules**: `expo-image-picker`, `expo-sharing`
 
-   ```bash
-   npx expo start
-   ```
+## Screenshots & UI
 
-In the output, you'll find options to open the app in a
+*(If you have screenshots, place them in a folder and link them here)*
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+The interface relies on custom Reanimated worklets combined with Moti pressables to achieve physically accurate, snappy button interactions on the UI thread without dropping frames.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Installation & Setup
 
-## Get a fresh project
+Since the app uses NativeWind, which relies on custom Babel and Metro bundler configurations, you must run it as a custom development build (not the standard Expo Go app).
 
-When you're ready, run:
+### Prerequisites
+- Node.js (v18+)
+- Android Studio / Android SDK (for local Android builds)
 
+### 1. Clone & Install
 ```bash
-npm run reset-project
+git clone https://github.com/your-username/alterQR.git
+cd alterQR
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 2. Run Locally
+To run the app on an attached Android device or emulator:
+```bash
+npx expo run:android
+```
 
-### Other setup steps
+## Release Builds (APK)
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+To generate a standalone Production APK (e.g., for GitHub Releases) without needing an active Metro bundler:
 
-## Learn more
+1. Ensure you have the required Gradle JVM arguments configured in `android/gradle.properties`:
+   ```properties
+   org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m
+   ```
+2. Build the release APK skipping the heavy linting tasks:
+   ```bash
+   cd android
+   ./gradlew assembleRelease --no-daemon -x lint -x lintVitalRelease -x lintVitalAnalyzeRelease
+   ```
+3. Find your built APK at:
+   `android/app/build/outputs/apk/release/app-release.apk`
 
-To learn more about developing your project with Expo, look at the following resources:
+## Architecture
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **`src/app/`**: Contains the Expo Router file-based screens (`index.tsx` for the Home screen, `settings.tsx` for the Image manager).
+- **`src/hooks/`**: Houses the global React Context providers. `use-qr-loop.tsx` provides the shared state logic syncing memory directly with AsyncStorage.
+- **`src/components/`**: Reusable Neo-Brutalist UI pieces (e.g., `<NeoShadow>`).
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
