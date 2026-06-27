@@ -2,6 +2,9 @@
 
 alterQR is a fast, offline-first React Native utility app designed to let users upload, manage, and cycle through multiple QR codes or barcode images. Built with a stunning **Neo-Brutalist** aesthetic, the app makes it effortless to rapidly switch between and share your different QR codes at events, check-ins, or networking sessions.
 
+## Why This App?
+
+Many shopkeepers want to have UPI as a payment option at their shops but they dont want all the money to be credited to one bank account for "Personal Reasons". So alterQR lets them add different bank accounts and lets them switch bw them so that all money cycles through all bank accounts.
 ## Features
 
 - **Dynamic QR Loop**: Load multiple QR code screenshots from your device's gallery. The app automatically cycles to the next QR code immediately after you share the current one.
@@ -19,11 +22,6 @@ alterQR is a fast, offline-first React Native utility app designed to let users 
 - **Storage**: `@react-native-async-storage/async-storage`
 - **Native Modules**: `expo-image-picker`, `expo-sharing`
 
-## Screenshots & UI
-
-*(If you have screenshots, place them in a folder and link them here)*
-
-The interface relies on custom Reanimated worklets combined with Moti pressables to achieve physically accurate, snappy button interactions on the UI thread without dropping frames.
 
 ## Installation & Setup
 
